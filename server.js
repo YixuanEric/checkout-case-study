@@ -23,7 +23,7 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
     console.log('webhook called');
     try {
         const authHeader = req.headers['authorization'];
-        const signature = req.headers['Cko-Signature']
+        const signature = req.headers['cko-signature']
 
         if (authHeader !== process.env.WEBHOOK_KEY) {
             return console.error('Unauthorized Webhook Attempt!');
@@ -35,7 +35,8 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
 
         // 3. Hash the RAW payload using SHA-256 and your key
         const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
-        const expectedSignature = hmac.update(req.rawBody); // Use the raw buffer here
+        hmac.update(req.rawBody);
+        const expectedSignature = hmac.digest('hex');
         console.log('signature', signature)
         console.log('expected signature', expectedSignature)
 
