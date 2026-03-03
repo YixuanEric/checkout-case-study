@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Demo Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <h1>Demo Store</h1>
+        <div class="country-selector">
+            <label for="country">Country:</label>
+            <select id="country">
+                <option value="GB">United Kingdom (£)</option>
+                <option value="US">United States ($)</option>
+                <option value="HK">Hong Kong (HK$)</option>
+                <option value="AE">United Arab Emirates (د.إ)</option>
+            </select>
+        </div>
+    </header>
+    <main>
+        <section class="product-catalog">
+            <h2>Our Products</h2>
+            <div class="product-grid">
+                <div class="product-card" data-price="25.00" data-name="Polo Shirt">
+                    <h3>Polo Shirt</h3>
+                    <p class="price">£25.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+                <div class="product-card" data-price="75.00" data-name="Headphones">
+                    <h3>Headphones</h3>
+                    <p class="price">£75.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+                <div class="product-card" data-price="45.00" data-name="Sunglasses">
+                    <h3>Sunglasses</h3>
+                    <p class="price">£45.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+                <div class="product-card" data-price="120.00" data-name="Boots">
+                    <h3>Boots</h3>
+                    <p class="price">£120.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+                <div class="product-card" data-price="60.00" data-name="Backpack">
+                    <h3>Backpack</h3>
+                    <p class="price">£60.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+                <div class="product-card" data-price="35.00" data-name="Joypad">
+                    <h3>Joypad</h3>
+                    <p class="price">£35.00</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="shopping-cart">
+            <h2>Shopping Cart</h2>
+            <ul id="cart-items">
+                <!-- Cart items will be dynamically added here -->
+            </ul>
+            <p>Total: <span id="cart-total">£0.00</span></p>
+            <div class="checkout-buttons">
+                <button id="checkout-flow">Checkout with Flow</button>
+                <button id="checkout-hpp">Checkout with HPP</button>
+                <button id="checkout-payment-link">Checkout with Payment Link</button>
+            </div>
+            <div id="flow-overlay" class="hidden">
+                <div class="overlay-content">
+                    <button id="flow-close-button">X</button>
+
+                    <div id="authentication-container"></div>
+
+                    <div id="flow-container"></div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+    <script src="https://checkout-web-components.checkout.com/index.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
