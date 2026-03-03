@@ -36,6 +36,8 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
         // 3. Hash the RAW payload using SHA-256 and your key
         const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
         const expectedSignature = hmac.update(req.rawBody); // Use the raw buffer here
+        console.log('signature', signature)
+        console.log('expected signature', expectedSignature)
 
         // 4. Compare the resulting HMAC with the header
         if (signature === expectedSignature) {
