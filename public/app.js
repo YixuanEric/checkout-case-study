@@ -188,7 +188,10 @@ checkoutFlowButton.addEventListener('click', async () => {
         onPaymentCompleted: (_component, paymentResponse) => {
             console.log("Create Payment with PaymentId: ", paymentResponse.id);
             emptyCart(); // Empty the cart on successful payment
+            flowComponentInstance.unmount();
+            flowComponentInstance = null;
             hideFlowOverlay();
+            alert("flow checkout complete!")
         },
         onChange: (component) => {
             console.log(

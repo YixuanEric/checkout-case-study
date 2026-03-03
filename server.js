@@ -43,8 +43,10 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
         // 4. Compare the resulting HMAC with the header
         if (signature === expectedSignature) {
             console.log('Webhook Verified: Payload is authentic.');
-            res.status(200).send({
-                message: "Webhook acknowledged",
+            res.status(200).json({
+                status: "success",
+                message: "webhook_received",
+                timestamp: new Date().toISOString()
             });
             // Process your business logic here
             const event = req.body;
