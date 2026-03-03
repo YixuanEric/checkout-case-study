@@ -13,6 +13,50 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const app = express();
 const port = process.env.PORT || 3000;
 
+const webhookParser = express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+});
+
+app.post('/payment-webhook', webhookParser, async (req, res) => {
+    console.log('webhook called');
+    try {
+        const authHeader = req.headers['authorization'];
+        const signature = req.headers['Cko-Signature']
+
+        if (authHeader !== process.env.WEBHOOK_KEY) {
+            return console.error('Unauthorized Webhook Attempt!');
+        }
+        if (!req.rawBody || !Buffer.isBuffer(req.rawBody)) {
+            console.error('Data received is not a Buffer!');
+            return res.status(500).send('Configuration Error');
+        }
+
+        // 3. Hash the RAW payload using SHA-256 and your key
+        const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
+        const expectedSignature = hmac.update(req.rawBody); // Use the raw buffer here
+
+        // 4. Compare the resulting HMAC with the header
+        if (signature === expectedSignature) {
+            console.log('Webhook Verified: Payload is authentic.');
+            res.status(200).send({
+                message: "Webhook acknowledged",
+            });
+            // Process your business logic here
+            const event = req.body;
+            console.log('Event Type:', event.type);
+        } else {
+            console.error('Webhook Verification Failed: HMAC mismatch.');
+            // This could indicate the payload was tampered with
+        }
+
+    } catch (error) {
+        console.error('Server Error:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+})
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -128,39 +172,7 @@ app.post('/create-payment-link', async (req, res) => {
 })
 
 
-app.post('/payment-webhook', async (req, res) => {
-    console.log('webhook called');
-    try {
-        const authHeader = req.headers['authorization'];
-        const signature = req.headers['Cko-Signature']
 
-        if (authHeader !== process.env.WEBHOOK_KEY) {
-            return console.error('Unauthorized Webhook Attempt!');
-        }
-
-        // 3. Hash the RAW payload using SHA-256 and your key
-        const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
-        const expectedSignature = hmac.update(req.body); // Use the raw buffer here
-
-        // 4. Compare the resulting HMAC with the header
-        if (signature === expectedSignature) {
-            console.log('Webhook Verified: Payload is authentic.');
-            res.status(200).send({
-                message: "Webhook acknowledged",
-            });
-            // Process your business logic here
-            const event = req.body;
-            console.log('Event Type:', event.type);
-        } else {
-            console.error('Webhook Verification Failed: HMAC mismatch.');
-            // This could indicate the payload was tampered with
-        }
-
-    } catch (error) {
-        console.error('Server Error:', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
-})
 
 
 app.get('/config', (req, res) => {
