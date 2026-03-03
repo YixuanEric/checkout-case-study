@@ -131,9 +131,6 @@ app.post('/create-payment-link', async (req, res) => {
 app.post('/payment-webhook', async (req, res) => {
     console.log('webhook called');
     try {
-        res.status(200).send({
-            message: "Webhook acknowledged",
-        });
         const authHeader = req.headers['authorization'];
         const signature = req.headers['Cko-Signature']
 
@@ -148,7 +145,9 @@ app.post('/payment-webhook', async (req, res) => {
         // 4. Compare the resulting HMAC with the header
         if (signature === expectedSignature) {
             console.log('Webhook Verified: Payload is authentic.');
-
+            res.status(200).send({
+                message: "Webhook acknowledged",
+            });
             // Process your business logic here
             const event = req.body;
             console.log('Event Type:', event.type);
