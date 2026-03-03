@@ -129,10 +129,11 @@ app.post('/create-payment-link', async (req, res) => {
 
 
 app.post('/payment-webhook', async (req, res) => {
-    console.log(req);
     console.log('webhook called');
     try {
-        res.sendStatus(200).json({ message: 'Webhook Acknowledged' });
+        res.status(200).send({
+            message: "Webhook acknowledged",
+        });
         const authHeader = req.headers['authorization'];
         const signature = req.headers['Cko-Signature']
 
