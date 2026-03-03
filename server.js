@@ -126,19 +126,36 @@ app.post('/create-payment-link', async (req, res) => {
     }
 })
 
+
 app.post('/payment-webhook', async (req, res) => {
     try {
 
         console.log(req);
         console.log('webhook called');
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Checkout API Error:', errorData);
-            return res.status(response.status).json(errorData);
+        res.sendStatus(200);
+
+        const authHeader = req.headers['authorization'];
+        const signature = req.headers['Cko-Signature']
+
+        if (authHeader !== process.env.WEBHOOK_KEY) {
+            return console.error('Unauthorized Webhook Attempt!');
         }
 
-        const data = await response.json();
-        return res.status(200).json(data);
+        // 3. Hash the RAW payload using SHA-256 and your key
+        const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
+        const expectedSignature = hmac.update(req.rawBody); // Use the raw buffer here
+
+        // 4. Compare the resulting HMAC with the header
+        if (signature === expectedSignature) {
+            console.log('Webhook Verified: Payload is authentic.');
+
+            // Process your business logic here
+            const event = req.body;
+            console.log('Event Type:', event.type);
+        } else {
+            console.error('Webhook Verification Failed: HMAC mismatch.');
+            // This could indicate the payload was tampered with
+        }
 
     } catch (error) {
         console.error('Server Error:', error);
