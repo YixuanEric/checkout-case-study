@@ -2,7 +2,11 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import crypto, { generateKey } from 'crypto';
+import crypto from 'crypto';
+
+import * as lark from '@larksuiteoapi/node-sdk';
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +23,15 @@ const products = [
     { id: '5', name: 'Backpack', price: 60.00, currency: 'GBP' },
     { id: '6', name: 'Joypad', price: 35.00, currency: 'GBP' }
 ];
+
+const client = new lark.Client({
+    appId: 'cli_a922b2ff79f91cc6',
+    appSecret: '4318IERsm3KEtYmp1FVBRcR32Llz1Bwv',
+    appType: lark.AppType.SelfBuild,
+    domain: lark.Domain.Feishu,
+});
+
+
 
 const webhookParser = express.json({
     verify: (req, res, buf) => {
@@ -58,10 +71,21 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
             // Process your business logic here
             const event = req.body;
             console.log('Event Type:', event.type);
+            const res = await client.im.message.create({
+                params: {
+                    receive_id_type: 'open_id',
+                },
+                data: {
+                    receive_id: 'ou_2c095cdb2f9d4d3b87be64abcb36a569',
+                    content: JSON.stringify({ text: event }),
+                    msg_type: 'text',
+                },
+            });
         } else {
             console.error('Webhook Verification Failed: HMAC mismatch.');
             // This could indicate the payload was tampered with
         }
+
 
     } catch (error) {
         console.error('Server Error:', error);
@@ -217,11 +241,11 @@ app.get('/.well-known/ucp', (req, res) => {
                                 "properties": {
                                     "id": {
                                         "type": "string",
-                                        "description": "必须是从 product_discovery 接口中获取的真实商品 id"
+                                        "description": "must be real id from product_discovery"
                                     },
                                     "quantity": {
                                         "type": "integer",
-                                        "description": "购买的数量，必须是整数"
+                                        "description": "must be integer"
                                     }
                                 },
                                 "required": ["id", "quantity"]
