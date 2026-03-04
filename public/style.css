@@ -110,7 +110,8 @@ section {
 .checkout-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Add some space between buttons */
+    gap: 10px;
+    /* Add some space between buttons */
 }
 
 .checkout-buttons button {
@@ -131,6 +132,7 @@ section {
     background-color: #cccccc;
     cursor: not-allowed;
 }
+
 /* Flow Overlay Styles */
 #flow-overlay {
     position: fixed;
@@ -138,11 +140,13 @@ section {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent black */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000; /* Ensure it's on top of everything */
+    z-index: 1000;
+    /* Ensure it's on top of everything */
 }
 
 #flow-overlay.hidden {
@@ -164,7 +168,8 @@ section {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1001; /* Ensure button is above overlay */
+    z-index: 1001;
+    /* Ensure button is above overlay */
 }
 
 #flow-close-button:hover {
@@ -190,10 +195,10 @@ section {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1001; /* Ensure button is above overlay */
+    z-index: 1001;
+    /* Ensure button is above overlay */
 }
 
 #flow-close-button:hover {
     background-color: #eee;
 }
-

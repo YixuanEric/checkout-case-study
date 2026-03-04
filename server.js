@@ -2,16 +2,23 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
+import crypto, { generateKey } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-
 const app = express();
 const port = process.env.PORT || 3000;
+app.use(express.static(path.join(__dirname, 'public')));
+
+const products = [
+    { id: '1', name: 'Polo Shirt', price: 25.00, currency: 'GBP' },
+    { id: '2', name: 'Headphones', price: 75.00, currency: 'GBP' },
+    { id: '3', name: 'Sunglasses', price: 45.00, currency: 'GBP' },
+    { id: '4', name: 'Boots', price: 120.00, currency: 'GBP' },
+    { id: '5', name: 'Backpack', price: 60.00, currency: 'GBP' },
+    { id: '6', name: 'Joypad', price: 35.00, currency: 'GBP' }
+];
 
 const webhookParser = express.json({
     verify: (req, res, buf) => {
@@ -63,7 +70,6 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
 })
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 
 app.post('/create-payment-session', async (req, res) => {
@@ -177,13 +183,127 @@ app.post('/create-payment-link', async (req, res) => {
 })
 
 
-
-
-
 app.get('/config', (req, res) => {
     res.json({
         ckoPublicKey: process.env.PUBLIC_KEY || null
     });
+});
+
+
+app.get('/.well-known/ucp', (req, res) => {
+    res.json({
+        "version": "1.0",
+        "merchant": {
+            "name": "Demo Store",
+            "description": "A demo e-commerce store with Checkout.com UCP integration"
+        },
+        "capabilities": {
+            "product_discovery": {
+                "endpoint": "/agent-products",
+                "method": "GET"
+            },
+            "checkout": {
+                "endpoint": "/agent-checkout",
+                "method": "POST",
+                "description": "When user decides to buy, generate payment link",
+                "requestBody": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "description": "Array of the items that user wants to buy",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "必须是从 product_discovery 接口中获取的真实商品 id"
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "description": "购买的数量，必须是整数"
+                                    }
+                                },
+                                "required": ["id", "quantity"]
+                            }
+                        }
+                    },
+                    "required": ["items"]
+                }
+            }
+        },
+        "payment_handlers": ["checkout.com"]
+    });
+});
+
+// 3. 商品发现 API (Product Discovery)
+app.get('/agent-products', (req, res) => {
+    console.log('/products called')
+    res.json(products);
+});
+
+// 4. Agentic Checkout API
+app.post('/agent-checkout', async (req, res) => {
+
+    console.log('agent-checkout called')
+    try {
+        // AI Agent 根据标准协议发送用户想要购买的商品及偏好
+        const { items } = req.body;
+
+        console.log(items)
+
+        // 在后端严格计算总金额，防止前端或 Agent 数据篡改
+        let totalAmount = 0;
+        items.forEach(item => {
+            const product = products.find(p => p.id === item.id || p.name === item.name);
+            if (product) {
+                totalAmount += product.price * item.quantity;
+            }
+        });
+
+        // 转换为 Checkout.com 需要的最小货币单位
+        const amountInMinorUnits = Math.round(totalAmount * 100);
+
+        // 调用 Checkout.com API 生成 Payment Link
+        const response = await fetch(`${process.env.API_ENDPOINT}/payment-links`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.SECRET_KEY}`,
+            },
+            body: JSON.stringify({
+                amount: amountInMinorUnits,
+                currency: 'GBP',
+                locale: 'en-GB',
+                processing_channel_id: process.env.PROCESSING_CHANNEL_ID,
+                billing: {
+                    address: {
+                        country: "GB"
+                    }
+                }
+                // UCP 场景下通常让用户通过安全链接完成最后支付，以确保合规和风控
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Checkout API Error during Agent transaction:', data);
+            return res.status(response.status).json(data);
+        }
+
+        // 将生成的支付链接返回给 AI Agent
+        // Agent 会在聊天界面中直接渲染这个链接（或对应的原生支付按钮）供用户点击
+        res.json({
+            status: "success",
+            checkout_url: data._links.redirect.href,
+            payment_session_id: data.id
+        });
+
+    } catch (error) {
+        console.error('Agent Checkout Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 app.listen(port, () => {

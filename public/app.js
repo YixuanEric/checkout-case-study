@@ -8,16 +8,10 @@ const checkoutHPPButton = document.getElementById('checkout-hpp');
 const checkoutPaymentLinkButton = document.getElementById('checkout-payment-link');
 const flowOverlay = document.getElementById('flow-overlay');
 const flowCloseButton = document.getElementById('flow-close-button');
+const aiInput = document.getElementById('ai-input');
+const aiSendButton = document.getElementById('ai-send-button');
+const aiChatMessages = document.getElementById('ai-chat-messages');
 
-let flowComponentInstance = null; // To store the mounted flow component instance
-let authComponentInstance = null; // To store the mounted flow component instance
-function showFlowOverlay() {
-    flowOverlay.classList.remove('hidden');
-}
-
-function hideFlowOverlay() {
-    flowOverlay.classList.add('hidden');
-}
 
 let cart = [];
 let currentCurrency = '£';
@@ -42,6 +36,14 @@ const localeMap = {
     'HK': 'zh-HK',
     'AE': 'ar'
 };
+
+function hideFlowOverlay() {
+    flowOverlay.classList.add('hidden');
+}
+
+function showFlowOverlay() {
+    flowOverlay.classList.remove('hidden');
+}
 
 async function getCkoPublicKey() {
     try {
@@ -313,6 +315,55 @@ cartItemsList.addEventListener('click', (event) => {
         const productName = event.target.dataset.name;
         cart = cart.filter(item => item.name !== productName);
         updateCartDisplay();
+    }
+});
+
+
+
+function appendMessage(sender, text) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-message', `${sender}-message`);
+    messageElement.textContent = text;
+    aiChatMessages.appendChild(messageElement);
+    aiChatMessages.scrollTop = aiChatMessages.scrollHeight; // Auto-scroll to bottom
+}
+
+
+
+async function handleAIChat() {
+    const userMessage = aiInput.value.trim();
+    if (userMessage) {
+        appendMessage('user', userMessage);
+        aiInput.value = '';
+
+        console.log('front end', userMessage)
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userMessage }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            appendMessage('ai', data.reply);
+        } catch (error) {
+            console.error('Error communicating with AI agent:', error);
+            appendMessage('ai', 'Oops! Something went wrong with the AI agent. Please try again later.');
+        }
+    }
+}
+
+aiSendButton.addEventListener('click', handleAIChat);
+
+aiInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+        handleAIChat();
     }
 });
 
