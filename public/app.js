@@ -18,9 +18,9 @@ let currentCurrency = '£';
 
 const currencyMap = {
     'GB': { symbol: '£', factor: 1.0 },
-    'US': { symbol: '$', factor: 1.25 }, // Example conversion factor
-    'HK': { symbol: 'HK$', factor: 9.75 }, // Example conversion factor
-    'AE': { symbol: 'د.إ', factor: 4.59 } // Example conversion factor
+    'US': { symbol: '$', factor: 1.0 },
+    'HK': { symbol: 'HK$', factor: 1.0 },
+    'AE': { symbol: 'د.إ', factor: 1.0 }
 };
 
 const currencyCodeMap = {
@@ -118,7 +118,7 @@ countrySelector.addEventListener('change', updatePricesAndCurrency);
 updatePricesAndCurrency();
 updateCheckoutButtonState(); // Set initial state of checkout buttons
 
-// Checkout buttons functionality (simulated for now)
+// Checkout buttons functionality 
 checkoutFlowButton.addEventListener('click', async () => {
     alert('Simulating Checkout with Flow');
 
@@ -130,7 +130,7 @@ checkoutFlowButton.addEventListener('click', async () => {
         return;
     }
 
-    const totalAmount = parseFloat(cartTotalSpan.textContent.replace(/[^0-9.-]+/g, "")) * 100; // Amount in minor units
+    const totalAmount = parseFloat(cartTotalSpan.textContent.replace(/[^0-9.-]+/g, "")) * 100;
     const selectedCurrencyCode = currencyCodeMap[countrySelector.value];
     const selectedCountryCode = countrySelector.value;
     const selectedLocale = localeMap[countrySelector.value];
@@ -164,7 +164,7 @@ checkoutFlowButton.addEventListener('click', async () => {
     const paymentSession = await paymentSessionResponse.json();
     console.log(paymentSession);
 
-    showFlowOverlay(); // Show overlay when Flow component is about to be mounted
+    showFlowOverlay();
     const checkout = await CheckoutWebComponents({
         publicKey: ckoPublicKey,
         environment: "sandbox",
@@ -189,7 +189,7 @@ checkoutFlowButton.addEventListener('click', async () => {
         },
         onPaymentCompleted: (_component, paymentResponse) => {
             console.log("Create Payment with PaymentId: ", paymentResponse.id);
-            emptyCart(); // Empty the cart on successful payment
+            emptyCart();
             flowComponentInstance.unmount();
             flowComponentInstance = null;
             hideFlowOverlay();
@@ -203,7 +203,7 @@ checkoutFlowButton.addEventListener('click', async () => {
         },
         onError: (component, error) => {
             console.log("onError", error, "Component", component.type);
-            hideFlowOverlay(); // Hide overlay on error
+            hideFlowOverlay();
         },
     });
 
@@ -308,6 +308,7 @@ checkoutPaymentLinkButton.addEventListener('click', async () => {
 
     const paymentSession = await paymentSessionResponse.json();
     console.log(paymentSession)
+    alert(paymentSession._links.redirect.href)
 });
 
 cartItemsList.addEventListener('click', (event) => {
@@ -318,52 +319,4 @@ cartItemsList.addEventListener('click', (event) => {
     }
 });
 
-
-
-function appendMessage(sender, text) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('chat-message', `${sender}-message`);
-    messageElement.textContent = text;
-    aiChatMessages.appendChild(messageElement);
-    aiChatMessages.scrollTop = aiChatMessages.scrollHeight; // Auto-scroll to bottom
-}
-
-
-
-async function handleAIChat() {
-    const userMessage = aiInput.value.trim();
-    if (userMessage) {
-        appendMessage('user', userMessage);
-        aiInput.value = '';
-
-        console.log('front end', userMessage)
-        try {
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: userMessage }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            appendMessage('ai', data.reply);
-        } catch (error) {
-            console.error('Error communicating with AI agent:', error);
-            appendMessage('ai', 'Oops! Something went wrong with the AI agent. Please try again later.');
-        }
-    }
-}
-
-aiSendButton.addEventListener('click', handleAIChat);
-
-aiInput.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
-        handleAIChat();
-    }
-});
 

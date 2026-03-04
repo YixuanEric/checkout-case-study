@@ -3,18 +3,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-
 import * as lark from '@larksuiteoapi/node-sdk';
 
-
+const app = express();
+const port = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '.env') });
-const app = express();
-const port = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Server side keeps a copy of products for Agent Use
 const products = [
     { id: '1', name: 'Polo Shirt', price: 25.00, currency: 'GBP' },
     { id: '2', name: 'Headphones', price: 75.00, currency: 'GBP' },
@@ -24,6 +23,7 @@ const products = [
     { id: '6', name: 'Joypad', price: 35.00, currency: 'GBP' }
 ];
 
+// Init Lark for webhook
 const client = new lark.Client({
     appId: 'cli_a922b2ff79f91cc6',
     appSecret: '4318IERsm3KEtYmp1FVBRcR32Llz1Bwv',
@@ -31,17 +31,18 @@ const client = new lark.Client({
     domain: lark.Domain.Feishu,
 });
 
-
-
+// Helper function for /payment-webhook
 const webhookParser = express.json({
     verify: (req, res, buf) => {
         req.rawBody = buf;
     }
 });
 
+// Handle Checkout.com Webhook
 app.post('/payment-webhook', webhookParser, async (req, res) => {
     console.log('webhook called');
     try {
+        // Verify if the webhook is from checkout.com
         const authHeader = req.headers['authorization'];
         const signature = req.headers['cko-signature']
 
@@ -53,27 +54,28 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
             return res.status(500).send('Configuration Error');
         }
 
-        // 3. Hash the RAW payload using SHA-256 and your key
+        // Hash the RAW payload using SHA-256 and webhook secret
         const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
         hmac.update(req.rawBody);
         const expectedSignature = hmac.digest('hex');
         console.log('signature', signature)
         console.log('expected signature', expectedSignature)
 
-        // 4. Compare the resulting HMAC with the header
+        // Compare the resulting HMAC with the header
         if (signature === expectedSignature) {
             console.log('Webhook Verified: Payload is authentic.');
             res.status(200).json("Webhook Received");
-            // Process your business logic here
+
+            // Send webhook info to Lark
             const event = req.body;
             console.log('Event Type:', event.type);
-            const larkRes = await client.im.message.create({
+            await client.im.message.create({
                 params: {
                     receive_id_type: 'open_id',
                 },
                 data: {
                     receive_id: 'ou_2c095cdb2f9d4d3b87be64abcb36a569',
-                    content: JSON.stringify({text:`${event.type}----${event.id}`}),
+                    content: JSON.stringify({ text: `${event.type}----${event.id}` }),
                     msg_type: 'text',
                 },
             });
@@ -81,8 +83,6 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
             console.error('Webhook Verification Failed: HMAC mismatch.');
             // This could indicate the payload was tampered with
         }
-
-
     } catch (error) {
         console.error('Server Error:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
@@ -91,7 +91,7 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
 
 app.use(express.json());
 
-
+// Handle Flow, request a payment session from Checkout.com
 app.post('/create-payment-session', async (req, res) => {
     try {
         const { amount, currency, billing, locale } = req.body;
@@ -130,7 +130,7 @@ app.post('/create-payment-session', async (req, res) => {
     }
 });
 
-
+// Handle HPP, request a HPP URL
 app.post('/create-hosted-payment-page', async (req, res) => {
     try {
         const { amount, currency, billing, locale } = req.body;
@@ -168,6 +168,7 @@ app.post('/create-hosted-payment-page', async (req, res) => {
     }
 })
 
+// Handle Payment Lini, request a Payment link
 app.post('/create-payment-link', async (req, res) => {
     try {
         const { amount, currency, billing, locale } = req.body;
@@ -202,14 +203,14 @@ app.post('/create-payment-link', async (req, res) => {
     }
 })
 
-
+// Return Checkout.com Public Key
 app.get('/config', (req, res) => {
     res.json({
         ckoPublicKey: process.env.PUBLIC_KEY || null
     });
 });
 
-
+// Implement UCP for Agent
 app.get('/.well-known/ucp', (req, res) => {
     res.json({
         "version": "1.0",
@@ -256,23 +257,18 @@ app.get('/.well-known/ucp', (req, res) => {
     });
 });
 
-// 3. 商品发现 API (Product Discovery)
+// Handle Agent Product Discovery function
 app.get('/agent-products', (req, res) => {
     console.log('/products called')
     res.json(products);
 });
 
-// 4. Agentic Checkout API
+// Handle Agent Checkout function
 app.post('/agent-checkout', async (req, res) => {
-
     console.log('agent-checkout called')
     try {
-        // AI Agent 根据标准协议发送用户想要购买的商品及偏好
         const { items } = req.body;
-
         console.log(items)
-
-        // 在后端严格计算总金额，防止前端或 Agent 数据篡改
         let totalAmount = 0;
         items.forEach(item => {
             const product = products.find(p => p.id === item.id || p.name === item.name);
@@ -280,11 +276,8 @@ app.post('/agent-checkout', async (req, res) => {
                 totalAmount += product.price * item.quantity;
             }
         });
-
-        // 转换为 Checkout.com 需要的最小货币单位
         const amountInMinorUnits = Math.round(totalAmount * 100);
-
-        // 调用 Checkout.com API 生成 Payment Link
+        // Get a payment link from checkout.com
         const response = await fetch(`${process.env.API_ENDPOINT}/payment-links`, {
             method: 'POST',
             headers: {
@@ -301,25 +294,19 @@ app.post('/agent-checkout', async (req, res) => {
                         country: "GB"
                     }
                 }
-                // UCP 场景下通常让用户通过安全链接完成最后支付，以确保合规和风控
             })
         });
 
         const data = await response.json();
-
         if (!response.ok) {
             console.error('Checkout API Error during Agent transaction:', data);
             return res.status(response.status).json(data);
         }
-
-        // 将生成的支付链接返回给 AI Agent
-        // Agent 会在聊天界面中直接渲染这个链接（或对应的原生支付按钮）供用户点击
         res.json({
             status: "success",
             checkout_url: data._links.redirect.href,
             payment_session_id: data.id
         });
-
     } catch (error) {
         console.error('Agent Checkout Error:', error);
         res.status(500).json({ message: 'Internal Server Error' });
