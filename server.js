@@ -73,7 +73,7 @@ app.post('/payment-webhook', webhookParser, async (req, res) => {
                 },
                 data: {
                     receive_id: 'ou_2c095cdb2f9d4d3b87be64abcb36a569',
-                    content: JSON.stringify({ text: event }),
+                    content: JSON.stringify({text:`${event.type}----${event.id}`}),
                     msg_type: 'text',
                 },
             });
